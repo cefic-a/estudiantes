@@ -5,12 +5,14 @@ import Navbar from './components/Navbar';
 import StatsCards from './components/StatsCards';
 import StudentTable from './components/StudentTable';
 import AnalyticsCharts from './components/AnalyticsCharts';
+import DeletedStudentsTable from './components/DeletedStudentsTable';
 
 function App() {
   const [students, setStudents] = useState([]);
   const [groups, setGroups] = useState([]);
   const [activeTab, setActiveTab] = useState('students');
   const [loading, setLoading] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -43,10 +45,8 @@ function App() {
   };
 
   const deleteStudent = async (id) => {
-    if (window.confirm('¿Eliminar este estudiante?')) {
-      await db.estudiantes.delete(id);
-      setStudents(prev => prev.filter(s => s.id !== id));
-    }
+    // Solo eliminamos del estado local, pero la eliminación real ya se hizo moviendo a la otra tabla
+    setStudents(prev => prev.filter(s => s.id !== id));
   };
 
   const addGroup = async (newGroup) => {
@@ -74,17 +74,38 @@ function App() {
     }
   };
 
+  // Restaurar estudiante desde eliminados
+  const restoreStudent = async (deletedStudent) => {
+    // Quitamos los campos extras (motivo, fechaEliminacion) y lo agregamos a estudiantes
+    const { motivo, fechaEliminacion, ...studentData } = deletedStudent;
+    await db.estudiantes.add(studentData);
+    await db.estudiantes_eliminados.delete(deletedStudent.id);
+    // Recargar lista activa
+    const estudiantesActualizados = await db.estudiantes.toArray();
+    setStudents(estudiantesActualizados);
+  };
+
+  const permanentDeleteStudent = async (id) => {
+    await db.estudiantes_eliminados.delete(id);
+  };
+
+  const toggleSidebar = () => setSidebarCollapsed(prev => !prev);
+
   if (loading) {
     return <div className="flex justify-center items-center h-screen">Cargando datos...</div>;
   }
 
   return (
     <div className="flex h-screen bg-gray-100">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Sidebar 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        collapsed={sidebarCollapsed} 
+      />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Navbar />
+        <Navbar onToggleSidebar={toggleSidebar} />
         <main className="flex-1 overflow-y-auto p-4 md:p-6">
-          {activeTab === 'students' ? (
+          {activeTab === 'students' && (
             <>
               <StatsCards students={students} groups={groups} />
               <div className="mt-6">
@@ -100,8 +121,13 @@ function App() {
                 />
               </div>
             </>
-          ) : (
-            <AnalyticsCharts students={students} groups={groups} />
+          )}
+          {activeTab === 'charts' && <AnalyticsCharts students={students} groups={groups} />}
+          {activeTab === 'deleted' && (
+            <DeletedStudentsTable
+              onRestore={restoreStudent}
+              onPermanentDelete={permanentDeleteStudent}
+            />
           )}
         </main>
       </div>

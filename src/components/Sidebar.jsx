@@ -1,72 +1,56 @@
-import { Users, BarChart3, Menu, X } from 'lucide-react';
+import { Users, BarChart3, Trash2, Menu } from 'lucide-react';
 import { useState } from 'react';
 
-
-/* Agregar en el Slide 2 botónes, uno para ver los grados de forma general 
-y que en cada grado se pueda ver, estadisticas del  grado y los estudiantes del grado.
-y otro para ver los grupos personalizados */
-const Sidebar = ({ activeTab, setActiveTab }) => {
-  const [isOpen, setIsOpen] = useState(false);
-
-  const toggleSidebar = () => setIsOpen(!isOpen);
+const Sidebar = ({ activeTab, setActiveTab, collapsed }) => {
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const toggleMobile = () => setIsMobileOpen(!isMobileOpen);
 
   const menuItems = [
     { id: 'students', label: 'Estudiantes', icon: Users },
     { id: 'charts', label: 'Estadísticas', icon: BarChart3 },
+    { id: 'deleted', label: 'Eliminados', icon: Trash2 },
   ];
+
+  const sidebarWidth = collapsed ? 'w-16' : 'w-64';
 
   return (
     <>
-      {/* Botón hamburguesa móvil */}
-      <button
-        onClick={toggleSidebar}
-        className="fixed top-4 left-4 z-50 p-2 bg-white rounded-md shadow-md md:hidden"
-      >
-        {isOpen ? <X size={20} /> : <Menu size={20} />}
+      <button onClick={toggleMobile} className="fixed top-4 left-4 z-50 p-2 bg-white rounded-md shadow-md md:hidden">
+        <Menu size={20} />
       </button>
-
-      {/* Sidebar */}
-      <div
-        className={`
-          fixed md:relative z-40 h-full w-64 bg-white shadow-lg transform transition-transform duration-300
-          ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
-        `}
-      >
+      <div className={`fixed md:relative z-40 h-full bg-white shadow-lg transition-all duration-300 ${sidebarWidth} ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
         <div className="flex flex-col h-full">
-          <div className="p-5 border-b">
-            <h1 className="text-xl font-bold text-indigo-700">CEFIC Ikh Tukh Kiwe La Estrella ⭐</h1>
-            <p className="text-xs text-gray-500">Gestión de estudiantes</p>
+          <div className={`p-5 border-b ${collapsed ? 'text-center' : ''}`}>
+            {!collapsed ? (
+              <>
+                <h1 className="text-xl font-bold text-indigo-700">CEFIC LA ESTRELLA IKH TUKH KIWE</h1>
+                <p className="text-xs text-gray-500">Gestión de estudiantes</p>
+              </>
+            ) : (
+              <h1 className="text-xl font-bold text-indigo-700">🛖</h1>
+            )}
           </div>
-          <nav className="flex-1 p-4 space-y-2">
+          <nav className="flex-1 p-2 space-y-2">
             {menuItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => {
                   setActiveTab(item.id);
-                  setIsOpen(false);
+                  setIsMobileOpen(false);
                 }}
-                className={`
-                  w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors
-                  ${activeTab === item.id
-                    ? 'bg-indigo-50 text-indigo-700'
-                    : 'text-gray-600 hover:bg-gray-100'}
-                `}
+                className={`w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-colors ${
+                  activeTab === item.id ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-100'
+                } ${collapsed ? 'justify-center' : ''}`}
+                title={collapsed ? item.label : ''}
               >
                 <item.icon size={20} />
-                <span>{item.label}</span>
+                {!collapsed && <span>{item.label}</span>}
               </button>
             ))}
           </nav>
         </div>
       </div>
-
-      {/* Overlay móvil */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
+      {isMobileOpen && <div className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden" onClick={() => setIsMobileOpen(false)} />}
     </>
   );
 };

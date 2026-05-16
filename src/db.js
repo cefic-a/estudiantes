@@ -2,21 +2,19 @@ import Dexie from 'dexie';
 import { initialStudents } from './data/mockData';
 
 export const db = new Dexie('SistemaEstudiantes');
-db.version(1).stores({
+
+db.version(2).stores({
   estudiantes: 'id, doc, grado, activo',
-  grupos: 'id'
+  grupos: 'id',
+  estudiantes_eliminados: 'id, doc, fechaEliminacion, motivo'
 });
 
 db.on('populate', async () => {
-  // Agregar grupos por defecto
   await db.grupos.bulkAdd([
-    { id: "g1", nombre: "Sede CEFIC" },
-    { id: "g2", nombre: "Especial (Guías)" },
-    { id: "g3", nombre: "Apadrinados PUEBLO_N" },
-    { id: "g4", nombre: "Apadrinados CENTRO" },
+    { id: 'g1', nombre: 'Subsede Central' },
+    { id: 'g2', nombre: 'Guías en casa' },
+    { id: 'g3', nombre: 'Aceleración' }
   ]);
-
-  // Agregar estudiantes del mock
   if (initialStudents && initialStudents.length) {
     const estudiantesConGrupos = initialStudents.map(s => ({
       ...s,
@@ -26,15 +24,4 @@ db.on('populate', async () => {
   }
 });
 
-// Abrir y verificar si ya hay datos, si no, forzar carga (por si la BD ya existía)
-db.open().then(async () => {
-  const count = await db.estudiantes.count();
-  if (count === 0 && initialStudents && initialStudents.length) {
-    const estudiantesConGrupos = initialStudents.map(s => ({
-      ...s,
-      gruposIds: s.gruposIds || []
-    }));
-    await db.estudiantes.bulkAdd(estudiantesConGrupos);
-    console.log('Estudiantes importados desde mockData');
-  }
-});
+db.open().catch(err => console.error('Error al abrir DB:', err));

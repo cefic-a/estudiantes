@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Edit, Trash2, Plus, Search } from 'lucide-react';
 import StudentModal from './StudentModal';
 import GroupManager from './GroupManager';
+import DeleteMotivoModal from './DeleteMotivoModal';
+import { db } from '../db';
 
 const StudentTable = ({ students, groups, onAdd, onEdit, onDelete, onAddGroup, onUpdateGroup, onDeleteGroup }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -14,6 +16,8 @@ const StudentTable = ({ students, groups, onAdd, onEdit, onDelete, onAddGroup, o
   const [modalOpen, setModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
   const [groupManagerOpen, setGroupManagerOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [studentToDelete, setStudentToDelete] = useState(null);
 
   const gradosUnicos = ['todos', ...new Set(students.map(s => s.grado))].sort((a,b) => a=== 'todos' ? -1 : a-b);
 
@@ -44,6 +48,27 @@ const StudentTable = ({ students, groups, onAdd, onEdit, onDelete, onAddGroup, o
     setModalOpen(true);
   };
 
+  const handleDeleteClick = (student) => {
+    setStudentToDelete(student);
+    setDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async (motivo) => {
+    if (!studentToDelete) return;
+    // Mover a estudiantes_eliminados
+    const eliminado = {
+      ...studentToDelete,
+      motivo: motivo,
+      fechaEliminacion: new Date().toISOString()
+    };
+    await db.estudiantes_eliminados.add(eliminado);
+    await db.estudiantes.delete(studentToDelete.id);
+    // Actualizar estado local
+    onDelete(studentToDelete.id);
+    setDeleteModalOpen(false);
+    setStudentToDelete(null);
+  };
+
   const handleSave = (studentData) => {
     if (editingStudent) {
       onEdit(studentData);
@@ -68,7 +93,7 @@ const StudentTable = ({ students, groups, onAdd, onEdit, onDelete, onAddGroup, o
         </div>
       </div>
 
-      {/* Filtros */}
+      {/* Filtros (igual que antes) */}
       <div className="p-4 bg-gray-50 border-b flex flex-wrap gap-3">
         <div className="flex items-center gap-2 bg-white rounded-lg border px-3 py-1">
           <Search size={18} className="text-gray-400" />
@@ -93,7 +118,7 @@ const StudentTable = ({ students, groups, onAdd, onEdit, onDelete, onAddGroup, o
         </select>
       </div>
 
-      {/* Tabla */}
+      {/* Tabla (igual, solo cambia el botón eliminar para usar handleDeleteClick) */}
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead className="bg-gray-100">
@@ -138,7 +163,7 @@ const StudentTable = ({ students, groups, onAdd, onEdit, onDelete, onAddGroup, o
                 <td className="px-4 py-2 text-center">
                   <div className="flex justify-center gap-2">
                     <button onClick={() => handleEdit(student)} className="text-blue-600 hover:text-blue-800"><Edit size={18} /></button>
-                    <button onClick={() => onDelete(student.id)} className="text-red-600 hover:text-red-800"><Trash2 size={18} /></button>
+                    <button onClick={() => handleDeleteClick(student)} className="text-red-600 hover:text-red-800"><Trash2 size={18} /></button>
                   </div>
                 </td>
               </tr>
@@ -150,7 +175,7 @@ const StudentTable = ({ students, groups, onAdd, onEdit, onDelete, onAddGroup, o
         </table>
       </div>
 
-      {/* Paginación */}
+      {/* Paginación (igual) */}
       <div className="p-4 border-t flex justify-between items-center flex-wrap gap-2">
         <div className="flex items-center gap-2 text-sm">
           <span>Mostrar</span>
@@ -168,6 +193,12 @@ const StudentTable = ({ students, groups, onAdd, onEdit, onDelete, onAddGroup, o
 
       <StudentModal isOpen={modalOpen} onClose={() => { setModalOpen(false); setEditingStudent(null); }} onSave={handleSave} initialData={editingStudent} groups={groups} />
       <GroupManager isOpen={groupManagerOpen} onClose={() => setGroupManagerOpen(false)} groups={groups} onAddGroup={onAddGroup} onUpdateGroup={onUpdateGroup} onDeleteGroup={onDeleteGroup} />
+      <DeleteMotivoModal
+        isOpen={deleteModalOpen}
+        onClose={() => { setDeleteModalOpen(false); setStudentToDelete(null); }}
+        onConfirm={handleConfirmDelete}
+        studentName={studentToDelete ? `${studentToDelete.apellidos} ${studentToDelete.nombres}` : ''}
+      />
     </div>
   );
 };
